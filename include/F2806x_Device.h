@@ -268,7 +268,7 @@ typedef char            Int8;
 
 #define DSP28_SCIB   	1
 
-#define DSP28_ECANA  	0
+#define DSP28_ECANA  	1
 
 #define DSP28_MCBSPA 	1
 
