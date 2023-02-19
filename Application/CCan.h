@@ -10,7 +10,6 @@
 
 void initCanGpio();
 void initCan();
-void run();
 void CAN_Task(void * pvParameters);
 
 

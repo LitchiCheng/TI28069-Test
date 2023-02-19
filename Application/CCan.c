@@ -181,10 +181,6 @@ void initCan()
 }
 
 void CAN_Task(void * pvParameters){
-    run();
-}
-
-void run(){
     initCanGpio();
     initCan();
     Uint16  j;

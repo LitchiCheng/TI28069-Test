@@ -4,9 +4,11 @@
 #include "semphr.h"
 
 // Application Task
+#include "testConfig.h"
 #include "redLedTask.h"
 #include "blueLedTask.h"
 #include "CCan.h"
+#include "testPwm.h"
 
 
 #define STACK_SIZE  128U
@@ -19,9 +21,12 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
-
+#if TEST_CAN
 static StaticTask_t canTaskBuffer;
 static StackType_t  canTaskStack[STACK_SIZE];
+#endif
+static StaticTask_t testPWMTaskBuffer;
+static StackType_t  testPWMTaskStack[STACK_SIZE];
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
@@ -110,13 +115,23 @@ void main(void)
                       tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                       blueTaskStack,        // Array to use as the task's stack.
                       &blueTaskBuffer );    // Variable to hold the task's data structure.
-    xTaskCreateStatic(CAN_Task,         // Function that implements the task.
-                          "CAN task",      // Text name for the task.
-                          STACK_SIZE,           // Number of indexes in the xStack array.
-                          ( void * ) 3,         // Parameter passed into the task.
-                          tskIDLE_PRIORITY + 3, // Priority at which the task is created.
-                          canTaskStack,        // Array to use as the task's stack.
-                          &canTaskBuffer );    // Variable to hold the task's data structure.
-
+    #ifdef CANTEST
+        xTaskCreateStatic(CAN_Task,         // Function that implements the task.
+                              "CAN task",      // Text name for the task.
+                              STACK_SIZE,           // Number of indexes in the xStack array.
+                              ( void * ) 3,         // Parameter passed into the task.
+                              tskIDLE_PRIORITY + 3, // Priority at which the task is created.
+                              canTaskStack,        // Array to use as the task's stack.
+                              &canTaskBuffer );    // Variable to hold the task's data structure.
+    #endif
+//    #ifdef CANTEST
+        xTaskCreateStatic(pwmTestTask,         // Function that implements the task.
+                              "pwm task",      // Text name for the task.
+                              STACK_SIZE,           // Number of indexes in the xStack array.
+                              ( void * ) 4,         // Parameter passed into the task.
+                              tskIDLE_PRIORITY + 4, // Priority at which the task is created.
+                              testPWMTaskStack,        // Array to use as the task's stack.
+                              &testPWMTaskBuffer );    // Variable to hold the task's data structure.
+//    #endif
     vTaskStartScheduler();
 }
