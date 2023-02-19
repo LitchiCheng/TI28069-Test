@@ -3,6 +3,12 @@
 #include "task.h"
 #include "semphr.h"
 
+// Application Task
+#include "redLedTask.h"
+#include "blueLedTask.h"
+#include "CCan.h"
+
+
 #define STACK_SIZE  128U
 
 static StaticTask_t redTaskBuffer;
@@ -14,8 +20,8 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
-static SemaphoreHandle_t xSemaphore = NULL;
-static StaticSemaphore_t xSemaphoreBuffer;
+static StaticTask_t canTaskBuffer;
+static StackType_t  canTaskStack[STACK_SIZE];
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
@@ -30,85 +36,6 @@ void vApplicationSetupTimerInterrupt( void )
                    1000000 / configTICK_RATE_HZ); // Timer period in uS
     CpuTimer2Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
     IER |= M_INT14;
-}
-
-//-------------------------------------------------------------------------------------------------
-static void blueLedToggle(void)
-{
-    static uint32_t counter = 0;
-
-    counter++;
-    if(counter & 1)
-    {
-        GpioDataRegs.GPBCLEAR.bit.GPIO39 = 1;
-    }
-    else
-    {
-        GpioDataRegs.GPBSET.bit.GPIO39 = 1;
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-static void redLedToggle(void)
-{
-    static uint32_t counter = 0;
-
-    counter++;
-    if(counter & 1)
-    {
-        GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
-    }
-    else
-    {
-        GpioDataRegs.GPBSET.bit.GPIO34 = 1;
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-interrupt void timer1_ISR( void )
-{
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
-
-//-------------------------------------------------------------------------------------------------
-static void setupTimer1( void )
-{
-    // Start the timer than activate timer interrupt to switch into first task.
-    EALLOW;
-    PieVectTable.TINT1 = &timer1_ISR;
-    EDIS;
-
-    ConfigCpuTimer(&CpuTimer1,
-                   configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-                   100000);                       // Timer period in uS
-    CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
-
-    IER |= M_INT13;
-}
-
-//-------------------------------------------------------------------------------------------------
-void LED_TaskRed(void * pvParameters)
-{
-    for(;;)
-    {
-        if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
-        {
-            blueLedToggle();
-        }
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-void LED_TaskBlue(void * pvParameters)
-{
-    for(;;)
-    {
-        redLedToggle();
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -139,13 +66,6 @@ void main(void)
     InitCpuTimers();
     InitGpio();
 
-    EALLOW;
-    GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;
-    GpioCtrlRegs.GPBDIR.bit.GPIO39 = 1;
-    GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;
-    GpioDataRegs.GPBCLEAR.bit.GPIO39 = 1;
-    EDIS;
-
     // Step 3. Clear all interrupts and initialize PIE vector table:
     // Disable CPU interrupts
     DINT;
@@ -174,10 +94,6 @@ void main(void)
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
 
-    setupTimer1();
-
-    xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
-
     // Create the task without using any dynamic memory allocation.
     xTaskCreateStatic(LED_TaskRed,          // Function that implements the task.
                       "Red LED task",       // Text name for the task.
@@ -194,6 +110,13 @@ void main(void)
                       tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                       blueTaskStack,        // Array to use as the task's stack.
                       &blueTaskBuffer );    // Variable to hold the task's data structure.
+    xTaskCreateStatic(CAN_Task,         // Function that implements the task.
+                          "CAN task",      // Text name for the task.
+                          STACK_SIZE,           // Number of indexes in the xStack array.
+                          ( void * ) 3,         // Parameter passed into the task.
+                          tskIDLE_PRIORITY + 3, // Priority at which the task is created.
+                          canTaskStack,        // Array to use as the task's stack.
+                          &canTaskBuffer );    // Variable to hold the task's data structure.
 
     vTaskStartScheduler();
 }
