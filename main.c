@@ -21,12 +21,14 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
-#if TEST_CAN
+#ifdef CAN_TEST
 static StaticTask_t canTaskBuffer;
 static StackType_t  canTaskStack[STACK_SIZE];
 #endif
+#ifdef PWM_TEST
 static StaticTask_t testPWMTaskBuffer;
 static StackType_t  testPWMTaskStack[STACK_SIZE];
+#endif
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
@@ -115,7 +117,7 @@ void main(void)
                       tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                       blueTaskStack,        // Array to use as the task's stack.
                       &blueTaskBuffer );    // Variable to hold the task's data structure.
-    #ifdef CANTEST
+    #ifdef CAN_TEST
         xTaskCreateStatic(CAN_Task,         // Function that implements the task.
                               "CAN task",      // Text name for the task.
                               STACK_SIZE,           // Number of indexes in the xStack array.
@@ -124,7 +126,7 @@ void main(void)
                               canTaskStack,        // Array to use as the task's stack.
                               &canTaskBuffer );    // Variable to hold the task's data structure.
     #endif
-//    #ifdef CANTEST
+    #ifdef PWM_TEST
         xTaskCreateStatic(pwmTestTask,         // Function that implements the task.
                               "pwm task",      // Text name for the task.
                               STACK_SIZE,           // Number of indexes in the xStack array.
@@ -132,6 +134,6 @@ void main(void)
                               tskIDLE_PRIORITY + 4, // Priority at which the task is created.
                               testPWMTaskStack,        // Array to use as the task's stack.
                               &testPWMTaskBuffer );    // Variable to hold the task's data structure.
-//    #endif
+    #endif
     vTaskStartScheduler();
 }
