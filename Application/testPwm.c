@@ -28,8 +28,12 @@ void pwmTestTask(void * pvParameters){
     EPwm1Regs.AQCTLA.all = 0x0006;
     #endif
     #ifdef PWM1_PULSE_MUTABLE_TEST
-    //增计数时，计数器等于CMPA，置高电平；减计数时，计数值等于CMPA，置低电平
+    //增计数时，计数器等于CMPA，PWM1A置高电平；减计数时，计数值等于CMPA，PWM1A置低电平
     EPwm1Regs.AQCTLA.all = 0x0060;
+    #endif
+    #ifdef PWM1_A_B_COMPLEMENTARY
+    //增计数时，计数器等于CMPA，PWM1A置低电平；减计数时，计数值等于CMPA，PWM1B置高电平
+    EPwm1Regs.AQCTLB.all = 0x0090;
     #endif
     //1khz PWM
     EPwm1Regs.TBPRD = 90000 /2;
